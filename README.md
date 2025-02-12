@@ -1,7 +1,7 @@
 ## AVOC Algorithm </br>
 A Heuristic Solver for Large-scale Minimum Sum-of-Squares Clustering with Optimality Guarantees
 <p align="center">
-  <img src="https://github.com/AnnaLivia/AVOC/blob/main/logo.png" width="300" height="300" />
+  <img src="https://github.com/AnnaLivia/AVOC/blob/main/logo.png" width="160" height="200" />
 </p>
 
 **AVOC** is a heuristic algorithm leveraging the concept of the anticlustering problem—i.e., the problem of partitioning a set of objects into groups with high intra-group dissimilarity and low inter-group dissimilarity.
