@@ -365,13 +365,13 @@ GAP UB-LB+ 0.000
 
 > V. Piccialli, A. M. Sudoso, A. Wiegele, SOS-SDP: an Exact Solver for Minimum Sum-of-Squares Clustering, **INFORMS Journal on Computing** (2022).
 > - Paper: https://doi.org/10.1287/ijoc.2022.1166
->   Code: https://github.com/antoniosudoso/sos-sdp
+> - Code: https://github.com/antoniosudoso/sos-sdp
 
 
 <br>
 
 > A. L. Croella: Anticlustering for Large Scale Clustering, General Conference FAIR, Naples 23-24/09/2024
-> - Poster: [https://doi.org/10.1287/ijoc.2022.1166](https://uniroma1it-my.sharepoint.com/:b:/g/personal/croella_1544694_studenti_uniroma1_it/EScY_IIbJqtIt2BU7NrFvUIBZXxXX-1DVnxqn75ATRx3uw?e=LmZMhS)
+> - Poster: [https://PosterFAIR](https://uniroma1it-my.sharepoint.com/:b:/g/personal/croella_1544694_studenti_uniroma1_it/EScY_IIbJqtIt2BU7NrFvUIBZXxXX-1DVnxqn75ATRx3uw?e=LmZMhS)
 
 
 <br>
