@@ -1,5 +1,5 @@
 ## AVOC Algorithm </br>
-A Heuristic Solver for Large-scale Minimum Sum-of-Squares Clustering with Optimality Guarantees
+[Strong bounds for large-scale Minimum Sum-of-Squares Clustering](https://arxiv.org/abs/2502.08397)
 <p align="center">
   <img src="https://github.com/AnnaLivia/AVOC/blob/main/logo.png" width="160" height="200" />
 </p>
@@ -7,7 +7,7 @@ A Heuristic Solver for Large-scale Minimum Sum-of-Squares Clustering with Optima
 **AVOC** is a heuristic algorithm leveraging the concept of the anticlustering problem—i.e., the problem of partitioning a set of objects into groups with high intra-group dissimilarity and low inter-group dissimilarity.
 This repository contains the C++ source code, the MATLAB scripts, and the datasets used for the experiments.
 
-> A. L. Croella, V. Piccialli, A. M. Sudoso, Large-scale Minimum Sum-of-Squares Clustering with Optimality Guarantees, **arxiv** (2025), .
+> A. L. Croella, V. Piccialli, A. M. Sudoso, Strong bounds for large-scale Minimum Sum-of-Squares Clustering, **[arxiv](https://arxiv.org/abs/2502.08397)** (2025), .
 
 
 <br>
