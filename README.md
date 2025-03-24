@@ -1,4 +1,4 @@
-## AVOC Algorithm </br>
+## AVOC: A Novel Clustering Algorithm with Optimality Guarantees </br>
 [Strong bounds for large-scale Minimum Sum-of-Squares Clustering](https://arxiv.org/abs/2502.08397)
 <p align="center">
   <img src="https://github.com/AnnaLivia/AVOC/blob/main/logo.png" width="160" height="200" />
