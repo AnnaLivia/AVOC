@@ -24,7 +24,7 @@ Each dataset is drawn from a mixture of \(K\) Gaussian distributions with equal 
 <br>
 
 ### 🔍 Example Visualizations
-Below we show datasets with \(N=10{,}000\), \(K=3\), and \(\sigma \in \{0.50, 0.75, 1.00\}\):
+Below we show datasets with \(N=10,000\), \(K=3\), and $\sigma \in \{0.50, 0.75, 1.00\}$:
 
 <p align="center">
   <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/10000_3_05.png" alt="10000-3-0.50" width="30%">
