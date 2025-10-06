@@ -29,7 +29,7 @@ Below we show datasets with \(N=10{,}000\), \(K=3\), and \(\sigma \in \{0.50, 0.
 <p align="center">
   <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/10000_3_05.png" alt="10000-3-0.50" width="30%">
   <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/10000_3_075.png" alt="10000-3-0.75" width="30%">
-  <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/10000_3_10.png" alt="10000-3-1.00" width="30%">
+  <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/10000_3_1.png" alt="10000-3-1.00" width="30%">
 </p>
 <br>
 
