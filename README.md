@@ -110,7 +110,7 @@ The log file reports AVOC’s progress when improvements are found, including:
 
 It also contains detailed SOS-SDP information for each anticluster (bounds, flags, cuts, runtime, etc.).
 
-👉 See the [`example`](./Results/example/example_LOG.txt) for details.
+👉 See the [`example`](Results/example/example_4_LOG.txt) for details.
 
 ---
 <br>
