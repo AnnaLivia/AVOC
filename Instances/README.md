@@ -12,19 +12,19 @@ This folder contains the datasets used in our experiments. We consider both **sy
 
 ## 🧪 Synthetic Instances
 To test our algorithm, we generate large-scale Gaussian datasets with:
-- **Number of points**: \(N = 10{,}000\)  
-- **Dimension**: \(D = 2\)  
-- **Number of clusters**: \(K \in \{2, 3, 4\}\)  
-- **Noise levels**: \(\sigma \in \{0.50, 0.75, 1.00\}\)  
+- **Number of points**: $N = 10,000$  
+- **Dimension**: $D = 2$  
+- **Number of clusters**: $K \in \{2, 3, 4\}$  
+- **Noise levels**: $\sigma \in \{0.50, 0.75, 1.00\}$  
 
-Each dataset is drawn from a mixture of \(K\) Gaussian distributions with equal proportions and spherical covariance \(\Sigma_j = \sigma I\). Cluster centers \(\mu_j\) are sampled uniformly from \([-10, 10]\).  
+Each dataset is drawn from a mixture of $K$ Gaussian distributions with equal proportions and spherical covariance $\Sigma_j = \sigma I$. Cluster centers $\mu_j$ are sampled uniformly from $[-10, 10]$.  
 
 - **Naming convention**: `N-K-σ` (e.g., `10000-3-0.75` denotes a dataset with 10,000 points, 3 clusters, and noise level 0.75).  
-- For small \(\sigma\), clusters are well separated; higher noise levels make them overlap more.  
+- For small $\sigma$, clusters are well separated; higher noise levels make them overlap more.  
 <br>
 
 ### 🔍 Example Visualizations
-Below we show datasets with \(N=10,000\), \(K=3\), and $\sigma \in \{0.50, 0.75, 1.00\}$:
+Below we show datasets with $N=10,000$, $K=3$, and $\sigma \in \{0.50, 0.75, 1.00\}$:
 
 <p align="center">
   <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/10000_3_05.png" alt="10000-3-0.50" width="30%">
