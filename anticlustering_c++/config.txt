@@ -1,19 +1,19 @@
 # result path
-RESULT_FOLDER = ../results
+RESULT_FOLDER = ../Results
 
+# number of starts for initial partition
+ALGORITHM_INIT_MULTI_START = 15
 # algorithm minimum gap lb-ub stop criterion (%)
 ALGORITHM_MIN_GAP_CRITERION = 0.001
 # algorithm maximum time stop criterion (%)
 ALGORITHM_MAX_TIME_PER_ANTI_CRITERION = 240
-# number of threads for anticlustering
-ANTICLUSTERING_THREADS = 6
 # number of threads for computing the partitions
-PARTITION_THREADS = 6
+PARTITION_THREADS = 7
 
 # number of starts of kmeans
-KMEANS_NUM_START = 100
+KMEANS_NUM_START = 1000
 # number of max iterations of kmeans
-KMEANS_MAX_ITERATION = 100
+KMEANS_MAX_ITERATION = 1000
 # do not display kmeans log (0), display log (1)
 KMEANS_VERBOSE = 0
 

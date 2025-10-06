@@ -3,8 +3,6 @@
 #include <map>
 #include <algorithm>
 #include <armadillo>
-#include "Kmeans.h"
-#include "kmeans_util.h"
 #include "ac_heuristic.h"
 
 // data file
@@ -26,9 +24,9 @@ int p;
 int k;
 
 // partition and anticlustering
+int n_starts;
 double max_time;
 double min_gap;
-int n_threads_anti;
 int n_threads_part;
 
 // k-means
@@ -64,64 +62,49 @@ int sdp_solver_max_triangle_ineq;
 double sdp_solver_triangle_perc;
 
 // read parameters in config file
-std::map<std::string, std::string> read_params(std::string &config_file) {
+std::map<std::string, std::string> read_params(const std::string& path) {
+	std::map<std::string, std::string> cfg;
+	std::ifstream in(path);
+	if (!in) { std::cerr << "Couldn't open config file: " << path << "\n"; return cfg; }
 
-    std::map<std::string, std::string> config_map = {};
-
-    std::ifstream cFile (config_file);
-    if (cFile.is_open()) {
-        std::string line;
-        while (getline(cFile, line)){
-            line.erase(std::remove_if(line.begin(), line.end(), isspace), line.end());
-            if(line[0] == '#' || line.empty())
-                continue;
-            auto delimiterPos = line.find('=');
-            auto key = line.substr(0, delimiterPos);
-            auto value = line.substr(delimiterPos + 1);
-            config_map.insert(std::pair<std::string, std::string>(key, value));
-        }
-
-    }
-    else {
-        std::cerr << "Couldn't open config file for reading.\n";
-    }
-
-    return config_map;
+	std::string line;
+	while (std::getline(in, line)) {
+		// trim spaces and tabs
+		line.erase(std::remove_if(line.begin(), line.end(),
+								  [](unsigned char c){ return c==' ' || c=='\t' || c=='\r'; }),
+				   line.end());
+		if (line.empty() || line[0]=='#') continue;
+		auto pos = line.find('=');
+		if (pos==std::string::npos || pos==0 || pos+1>=line.size()) continue;
+		cfg.emplace(line.substr(0,pos), line.substr(pos+1));
+	}
+	return cfg;
 }
 
-void sort_all(arma::mat &data, arma::mat &sol) {
+// save sorted clustering solution and data to file
+void sort_all(arma::mat& data, arma::mat& sol) {
+	const arma::uword N = data.n_rows, D = data.n_cols, K = sol.n_cols;
 
-    //reorder data e init_sol
-    arma::mat centroids(k, d);
-    arma::vec count(k);
-    for (int i = 0; i < n; i++) {
-        for (int c = 0; c < k; ++c)
-            if (sol(i, c) == 1) {
-        		centroids.row(c) += data.row(i);
-        		count(c) += 1;
-        	}
-    }
-    for (int c = 0; c < k; ++c)
-    	centroids.row(c) /= count(c);
+	// Compute centroids
+	arma::vec counts = arma::sum(sol, 0).t();     // K x 1
+	arma::mat centroids = sol.t() * data;         // K x D
+	centroids.each_col() /= counts;
 
-    arma::vec distances(n);
-    for (int i = 0; i < n; ++i)
-        for (int c = 0; c < k; ++c)
-            if (sol(i, c) == 1) {
-                distances(i) = std::pow(norm(data.row(i) - centroids.row(c), 2), 2);
-                break;
-            }
+	// labels for each point (N x 1) in {0..K-1}
+	arma::uvec labels = arma::index_max(sol, 1);
 
-	// Sort distances and get the sorted indices
-    arma::uvec sorted_indices = arma::sort_index(distances, "ascend");
-    arma::mat sorted_data = data.rows(sorted_indices);
-    arma::mat sorted_sol = sol.rows(sorted_indices);
+	// squared distance of each point to its assigned centroid
+	arma::mat picked = centroids.rows(labels);    // N x D (gathers centroid row per point)
+	arma::mat diff = data - picked;
+	arma::vec dist2 = arma::sum(arma::square(diff), 1);  // N x 1
 
-    data = sorted_data;
-    sol = sorted_sol;
-    save_to_file(sol, "KM");
-    save_to_file(data, "DATA");
+	// sort by ascending distance
+	arma::uvec order = arma::sort_index(dist2, "ascend");
+	data = data.rows(order);
+	sol  = sol.rows(order);
 
+	//save_to_file(sol, "KM");
+	//save_to_file(data, "DATA");
 }
 
 // write log preamble for instance
@@ -130,9 +113,9 @@ void write_log_preamble(double init_mss) {
 	log_file << "DATA_FILE, n, d, k, t:\n";
     log_file << data_path << " " << n << " " << d << " " << k << " " << p << "\n\n";
 
+    log_file << "ALGORITHM_INIT_MULTI_START: " << n_starts << "\n";
     log_file << "ALGORITHM_MIN_GAP_CRITERION: " <<  std::setprecision(3) << min_gap << "\n";
     log_file << "ALGORITHM_MAX_TIME_PER_ANTI_CRITERION: " <<  std::setprecision(3) << max_time << "\n";
-    log_file << "ANTICLUSTERING_THREADS: " << n_threads_anti << "\n";
 	log_file << "PARTITION_THREADS: " << n_threads_part << "\n\n";
 
 	log_file << "KMEANS_NUM_START: " << kmeans_start << "\n";
@@ -189,79 +172,64 @@ arma::mat read_data(const char *filename) {
 }
 
 // read clustering sol
-arma::mat read_sol(const char *filename) {
+arma::mat read_sol(const char* filename) {
+	std::ifstream f(filename);
+	if (!f) { std::cerr << strerror(errno) << "\n"; std::exit(EXIT_FAILURE); }
 
-	std::ifstream file(filename);
-	if (!file) {
+	// peek first line to infer columns
+	std::streampos start = f.tellg();
+	std::string first;
+	std::getline(f, first);
+	std::istringstream iss(first);
+	int cols = 0; double tmp;
+	while (iss >> tmp) ++cols;
+
+	// rewind
+	f.clear();
+	f.seekg(start);
+
+	arma::mat sol(n, k, arma::fill::zeros);
+
+	if (cols == 1) {
+		// label per row
+		for (int i = 0; i < n; ++i) {
+			int c; f >> c;
+			if (c < 0 || c >= k) { std::cerr << "read_sol(): label out of range\n"; std::exit(EXIT_FAILURE); }
+			sol(i, c) = 1.0;
+		}
+	} else {
+		if (cols != k) { std::cerr << "read_sol(): expected " << k << " columns, got " << cols << "\n"; std::exit(EXIT_FAILURE); }
+		for (int i = 0; i < n; ++i)
+			for (int j = 0; j < k; ++j)
+				f >> sol(i, j);
+	}
+	return sol;
+}
+
+// compute mss for a given solution
+double compute_mss(const arma::mat& data, const arma::mat& sol) {
+	const arma::uword N = data.n_rows;
+
+	// counts per cluster
+	arma::vec counts = arma::sum(sol, 0).t();
+	if (arma::any(counts == 0)) {
 		std::cerr << strerror(errno) << "\n";
 		exit(EXIT_FAILURE);
 	}
 
-	std::ifstream filecheck(filename);
-	std::string line;
-	getline(filecheck, line);
-	std::stringstream ss(line);
-	int cols = 0;
-	double item;
-	while(ss >> item) cols++;
-	filecheck.close();
+	// centroids (K x D)
+	arma::mat centroids = sol.t() * data;
+	centroids.each_col() /= counts;
 
-	arma::mat sol(n, k);
-	for (int i = 0; i < n; i++) {
-		if (cols == 1) {
-			sol.row(i) = arma::zeros(k).t();
-			int c = 0;
-			file >> c;
-			sol(i, c) = 1;
-		}
-		else {
-			for (int j = 0; j < k; j++)
-				file >> sol(i, j);
-		}
-	}
+	// label of each point (N x 1)
+	arma::uvec labels = arma::index_max(sol, 1);
 
-	return sol;
-}
+	// pick each point's centroid (N x D), compute row-wise squared distances
+	arma::mat picked = centroids.rows(labels);
+	arma::mat diff   = data - picked;
+	arma::vec row_sq = arma::sum(arma::square(diff), 1);
 
-
-// compute mss for a given solution
-double compute_mss(arma::mat &data, arma::mat &sol) {
-
-    int data_n = data.n_rows;
-    int data_d = data.n_cols;
-    int data_k = sol.n_cols;
-
-    if (data_n != sol.n_rows) {
-        std::printf("compute_mss() - ERROR: inconsistent data and sol!\n");
-        exit(EXIT_FAILURE);
-    }
-
-    arma::mat assignment_mat = arma::zeros(data_n, data_k);
-    arma::vec count = arma::zeros(data_k);
-    arma::mat centroids = arma::zeros(data_k, data_d);
-    for (int i = 0; i < data_n; i++) {
-        for (int j = 0; j < data_k; j++) {
-            if (sol(i,j) == 1) {
-                assignment_mat(i, j) = 1;
-                ++count(j);
-                centroids.row(j) += data.row(i);
-            }
-        }
-    }
-
-    // compute clusters' centroids
-    for (int c = 0; c < data_k; c++) {
-        // empty cluster
-        if (count(c) == 0) {
-            std::printf("compute_mss(): cluster %d is empty!\n", c);
-            return false;
-        }
-        centroids.row(c) = centroids.row(c) / count(c);
-    }
-
-    arma::mat m = data - assignment_mat * centroids;
-
-    return arma::dot(m.as_col(), m.as_col());
+	return arma::accu(row_sq);
 }
 
 void run(int argc, char **argv) {
@@ -272,9 +240,9 @@ void run(int argc, char **argv) {
     result_folder = config_map["RESULT_FOLDER"];
 
     // number of thread for computing the partition bound
+    n_starts = std::stoi(config_map["ALGORITHM_INIT_MULTI_START"]);
     min_gap = std::stod(config_map["ALGORITHM_MIN_GAP_CRITERION"]);
     max_time = std::stoi(config_map["ALGORITHM_MAX_TIME_PER_ANTI_CRITERION"]);
-    n_threads_anti = std::stoi(config_map["ANTICLUSTERING_THREADS"]);
     n_threads_part = std::stoi(config_map["PARTITION_THREADS"]);
 
 	// kmeans
@@ -310,21 +278,32 @@ void run(int argc, char **argv) {
     sdp_solver_maxtime = 3*3600;
     
     if (argc != 5) {
-        std::cerr << "Input: <DATA_FILE> <SOL_FILE> <K> <T>" << std::endl;
+        std::cerr << "Input: <DATA_FILE> <SOL_FILE> <K> <T>\n";
         exit(EXIT_FAILURE);
     }
-    
+
+    // read input parameters
     data_path = argv[1];
     init_path = argv[2];
 
     k = std::stoi(argv[3]);
     p = std::stoi(argv[4]);
 
-    if (k < n_threads_anti)
-        n_threads_anti = k;
-    if (p < n_threads_part)
-        n_threads_part = p;
+	if (k <= 0 || p <= 0) {
+		std::cerr << "K and T must be positive.\n";
+		std::exit(EXIT_FAILURE);
+	}
 
+	unsigned hw = std::max(1u, std::thread::hardware_concurrency());
+	n_threads_part = std::clamp(n_threads_part, 1, (int)hw);
+
+	// percentage gap
+	auto pct = [](double ub, double lb){
+		if (ub <= 0) return 0.0;
+		return (ub - lb) * 100.0 / ub;
+	};
+
+	// read data and init sol
     std::string str_path = data_path;
     inst_name = str_path.substr(str_path.find_last_of("/\\")+1);
     inst_name = inst_name.substr(0, inst_name.find("."));
@@ -342,24 +321,19 @@ void run(int argc, char **argv) {
     double init_mss = compute_mss(Ws, init_sol);
 	sort_all(Ws, init_sol);
 
-    std::cout << std::endl << "---------------------------------------------------------------------" << std::endl;
-    std::cout << "Instance " << inst_name << std::endl;
-    std::cout << "Num Points " << n << std::endl;
-    std::cout << "Num Features " << d << std::endl;
-    std::cout << "Num Partitions " << p << std::endl;
-    std::cout << "Num Clusters " << k << std::endl << std::endl;
-    std::cout << std::fixed << std::setprecision(2);
-    std::cout << "Initial Heuristic MSS: " << init_mss << std::endl;
-    std::cout << "---------------------------------------------------------------------" << std::endl << std::endl;
-
-    log_file.open(result_path + "_LOG.txt");
+	// printing instance info
+    std::cout << "\n---------------------------------------------------------------------\n";
+    std::cout << "Instance "       		   << inst_name << "\n";
+    std::cout << "Num Points " 	   		   << n << "\n";
+    std::cout << "Num Features "   		   << d << "\n";
+    std::cout << "Num Partitions " 		   << p << "\n";
+    std::cout << "Num Clusters "   		   << k << "\n\n";
+    std::cout << std::fixed 	   		   << std::setprecision(2);
+    std::cout << "Initial Heuristic MSS: " << init_mss << "\n";
+    std::cout << "---------------------------------------------------------------------\n\n";
+    log_file.open(result_path + "_LOGinit.txt");
     write_log_preamble(init_mss);
 
-    double best_lb = 0;
-    double best_lb_plus = 0;
-    double best_ub = init_mss;
-
-	// printing results
     test_SUMMARY << std::fixed << std::setprecision(2)
     << inst_name << "\t"
     << n << "\t"
@@ -367,43 +341,51 @@ void run(int argc, char **argv) {
     << k << "\t"
     << p << "\t"
     << init_mss << "\t";
-
     test_SUMMARY << std::fixed << std::setprecision(3);
-	
+
+	// Run the anticlustering heuristic
     HResult results;
     results.init_sol = init_sol;
     results.heu_mss = init_mss;
+    results.first_mss = 0;
     results.lb_time = 0;
     results.h_time = 0;
     results.m_time = 0;
 
     avoc(Ws, results);
 
-    std::cout << "\nINIT: " << init_mss << std::endl;
-    std::cout << "NEW UB: " << results.heu_mss << std::endl;
-    std::cout << "LB: " << results.lb_mss << std::endl;
-    std::cout << "LB+: " << results.ub_mss << std::endl;
-    std::cout << "ANTI OBJ: " << results.anti_obj << std::endl;
-    std::cout << "SWAPS: " << results.n_swaps << std::endl;
-    std::cout << "STOP: " << results.stop << std::endl;
-    std::cout << "---------------------------------------------------------------------" << std::endl;
-    std::cout << "GAP UB-LB " <<  (results.heu_mss - results.lb_mss)*100/results.heu_mss << "%" << std::endl;
-    std::cout << "---------------------------------------------------------------------" << std::endl;
-    std::cout << "GAP UB-LB+ " <<  (results.heu_mss - results.ub_mss)*100/results.heu_mss << "%" << std::endl;
-    std::cout << "---------------------------------------------------------------------" << std::endl;
+    std::cout << "\nINIT: "    << results.heu_mss << "\n";
+    std::cout << "FIRST LB+: " << results.first_mss << "\n";
+    std::cout << "ANTI OBJ: "  << results.anti_obj << "\n";
+    std::cout << "LB: "        << results.lb_mss << "\n";
+    std::cout << "LB+: " 	   << results.ub_mss << "\n";
+    std::cout << "SWAPS: " 	   << results.n_swaps << "\n";
+    std::cout << "STOP: " 	   << results.stop << "\n";
+    std::cout << "---------------------------------------------------------------------\n";
+    std::cout << "GAP_LB' " << pct(results.heu_mss, results.first_mss) << "%\n";
+	std::cout << "---------------------------------------------------------------------\n";
+	std::cout << "GAP^+ " 		 << pct(results.heu_mss, results.anti_obj) << "%\n";
+	std::cout << "---------------------------------------------------------------------\n";
+    std::cout << "GAP_LB " 		 << pct(results.heu_mss, results.lb_mss) << "%\n";
+    std::cout << "---------------------------------------------------------------------\n";
+    std::cout << "GAP_U " 		 << pct(results.heu_mss, results.ub_mss) << "%\n";
+    std::cout << "---------------------------------------------------------------------\n";
 
 	test_SUMMARY
-	<< results.ub_mss << "\t"
-	<< results.lb_mss << "\t"
-	<< results.anti_obj << "\t"
-    << (results.heu_mss - results.lb_mss)*100/results.heu_mss << "%\t"
-	<< (results.heu_mss - results.ub_mss)*100/results.heu_mss << "%\t"
-    << results.m_time << "\t"
-    << results.h_time << "\t"
-    << results.n_swaps << "\t"
-    << results.stop << "\t"
-    << results.lb_time << "\t"
-    << (results.h_time + results.m_time + results.lb_time)/60 << "\n";
+	<< results.first_mss << "\t"
+	<< results.anti_obj  << "\t"
+	<< results.ub_mss    << "\t"
+	<< results.lb_mss    << "\t"
+    << pct(results.heu_mss, results.first_mss) << "%\t"
+	<< pct(results.heu_mss, results.anti_obj) << "%\t"
+    << pct(results.heu_mss, results.lb_mss) << "%\t"
+	<< pct(results.heu_mss, results.ub_mss) << "%\t"
+    << results.m_time    << "\t"
+    << results.h_time    << "\t"
+    << results.n_swaps   << "\t"
+    << results.stop      << "\t"
+    << results.lb_time   << "\t"
+    << (results.h_time + results.m_time + results.lb_time)/60    << "\n";
 
     log_file.close();
 	test_SUMMARY.close();

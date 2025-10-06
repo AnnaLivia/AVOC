@@ -6,7 +6,8 @@ function [best_bound, best_Xopt, best_flag, best_ineq, cp_iter, cp_flag, ...
     parent_Bcell, parent_l, parent_n, inherit_perc, decision_i, decision_j)
 
 % note that Z1 is the psd matrix and Z2 is the non-negative matrix.
-addpath('/Library/gurobi1200/macos_universal2/matlab');
+
+%addpath('/your_path_to_gurobi/gurobiXX/linux64/matlab');
 
 warning off;
 

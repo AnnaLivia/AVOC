@@ -5,134 +5,86 @@
 #include "config_params.h"
 #include "ac_heuristic.h"
 
-
-ThreadPoolPartition::ThreadPoolPartition(SharedDataPartition *shared_data, int n_thread) {
-
-    // This returns the number of threads supported by the system.
-    // auto numberOfThreads = std::thread::hardware_concurrency();
-    int numberOfThreads = n_thread;
-
-    this->shared_data = shared_data;
-
-    done = false;
-
+// Constructor initializes the thread pool with a given number of threads
+ThreadPoolPartition::ThreadPoolPartition(SharedDataPartition* shared_data, int n_thread)
+    : shared_data(shared_data), done(false)
+{
+    const int numberOfThreads = n_thread;
+    threads.reserve(numberOfThreads);
     for (int i = 0; i < numberOfThreads; ++i) {
-        // The threads will execute the private member `doWork`. Note that we need
-        // to pass a reference to the function (namespaced with the class name) as
-        // the first argument, and the current object as second argument
         threads.emplace_back(&ThreadPoolPartition::doWork, this, i);
     }
-
 }
 
-// The destructor joins all the threads so the program can exit gracefully.
+// The destructor joins all the threads so the program can exit gracefully
 void ThreadPoolPartition::quitPool() {
-
     {
         std::lock_guard<std::mutex> l(shared_data->queueMutex);
-        // So threads know it's time to shut down
         done = true;
     }
-
-    // Wake up all the threads, so they can finish and be joined
     shared_data->queueConditionVariable.notify_all();
-
-    for (auto& thread : threads) {
-        thread.join();
-    }
+    for (auto& th : threads) th.join();
 }
 
-// This function will be called by the server every time there is a request
-// that needs to be processed by the thread pool
-void ThreadPoolPartition::addJob(PartitionJob *job) {
-    // Grab the mutex
-    std::lock_guard<std::mutex> l(shared_data->queueMutex);
-
-    // Push the request to the queue
-    shared_data->queue.push_back(job);
-
-    // Notify one thread that there are requests to process
+// Function to add a job to the thread pool's queue
+void ThreadPoolPartition::addJob(PartitionJob* job) {
+    {
+        std::lock_guard<std::mutex> l(shared_data->queueMutex);
+        shared_data->queue.push_back(job);
+    }
     shared_data->queueConditionVariable.notify_one();
 }
 
 // Function used by the threads to grab work from the queue
 void ThreadPoolPartition::doWork(int id) {
+    // Reuse big buffers per thread to avoid repeated heap allocs
+    thread_local arma::mat sol;
+    thread_local arma::mat cls;
 
-    while (true) {
+    for (;;) {
+        PartitionJob* job = nullptr;
 
-        PartitionJob *job;
-
+        // ---- Grab one job or exit ----
         {
             std::unique_lock<std::mutex> l(shared_data->queueMutex);
-            while (shared_data->queue.empty() && !done) {
-                // Only wake up if there are elements in the queue or the program is shutting down
-                shared_data->queueConditionVariable.wait(l);
-            }
-
-
-            // If we are shutting down exit without trying to process more work
-            if (done) break;
-
-
-            shared_data->threadStates[id] = true;
-
+            shared_data->queueConditionVariable.wait(
+                l, [&] { return done || !shared_data->queue.empty(); }
+            );
+            // Exit only when we're done AND nothing left to do
+            if (done && shared_data->queue.empty()) break;
 
             job = shared_data->queue.front();
             shared_data->queue.pop_front();
+            shared_data->threadStates[id] = true;
         }
 
-        int np = (int) job->part_data.n_rows;
-        std::cout << std::endl << "*********************************************************************" << std::endl;
-        std::cout << "Partition " << (job->part_id + 1) << " processed by Thread "<< id << "\nPoints " << np;
-        std::cout << std::endl << "*********************************************************************" << std::endl;
-
-        // Lock the mutex to ensure thread-safe access to the shared global file stream
-        std::lock_guard<std::mutex> guard(file_mutex);
-
-        log_file << "\nPARTITION " << (job->part_id + 1);
-        arma::mat sol(np, k);
+        // ---- Process job (no locks) ----
+        const int np = static_cast<int>(job->part_data.n_rows);
+        double ub_mssc = 0.0;
         UserConstraints constraints;
+        const double lb_mssc = sdp_branch_and_bound(
+            k, job->part_data, ub_mssc, constraints, sol,
+            job->kmeans_ub, shared_data->print
+        );
 
-        /*
-        // standardize data
-        double lb_mssc;
-        if (stddata) {
-            arma::mat standardized = job->part_data;
-            arma::mat dist = compute_distances(standardized);
-            arma::rowvec means = arma::mean(standardized, 0);
-            arma::rowvec stddevs = arma::stddev(standardized, 0, 0);
-            standardized.each_row() -= means;
-            standardized.each_row() /= stddevs;
-            sdp_branch_and_bound(k, standardized, constraints, sol);
-            lb_mssc = compute_mss(job->part_data, sol);
-        }
-        else
-        */
-        double ub_mssc = 0;
-        double lb_mssc = sdp_branch_and_bound(k, job->part_data, ub_mssc, constraints, sol, job->max_ub, shared_data->print);
-        arma::mat sol_f = std::move(arma::join_horiz(job->part_data, sol));
-        //save_to_file(sol_f, "LB_" + std::to_string(job->part_id + 1));
+        // ---- Build labels + cls fast (vectorized) ----
+        arma::uvec labels = arma::index_max(sol, 1);
 
-        arma::mat cls(np, d+1);
-        for (int i = 0; i < np; i++) {
-            for (int j = 0; j < d; j++)
-                cls(i,j) = job->part_data(i,j);
-            for (int c = 0; c < k; c++)
-                if (sol(i,c) == 1)
-                    cls(i,d) = c;
-        }
+        // cls = [data | labels]
+        cls.set_size(np, d + 1);
+        cls.cols(0, d - 1) = job->part_data;
+        cls.col(d) = arma::conv_to<arma::colvec>::from(labels);
 
+        // ---- Publish results (very short lock) ----
         {
             std::lock_guard<std::mutex> l(shared_data->queueMutex);
-            shared_data->lb_part.push_back(lb_mssc);
-            shared_data->ub_part.push_back(ub_mssc);
-            shared_data->sol_part[job->part_id] = cls;
+            shared_data->lb_part[job->part_id] = lb_mssc;
+            shared_data->ub_part[job->part_id] = ub_mssc;
+            shared_data->sol_part[job->part_id] = cls; // leave move if your container supports it
             shared_data->threadStates[id] = false;
         }
 
         shared_data->mainConditionVariable.notify_one();
-
-        delete (job);
-
+        delete job;
     }
 }

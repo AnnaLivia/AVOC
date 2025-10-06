@@ -934,9 +934,6 @@ double sdp_branch_and_bound(int k, arma::mat &Ws, double &ub, UserConstraints &c
 
     ThreadPool pool(shared_data, input_data, n_thread);
 
-	if (shared_data->print)
-    	print_header_sdp(log_file);
-
     auto start_all = std::chrono::high_resolution_clock::now();
 
     auto *matlab_struct = new MatlabStruct();
@@ -977,18 +974,16 @@ double sdp_branch_and_bound(int k, arma::mat &Ws, double &ub, UserConstraints &c
     if (queue->empty())
         shared_data->gap = 0.0;
 
-	if (shared_data->print) {
-	    log_file << "\n";
-	    log_file << "WALL_TIME: " << duration_all.count() << " sec\n";
-	    log_file << "N_NODES: " << shared_data->n_nodes << "\n";
-	    log_file << "AVG_INEQ: " << (double) shared_data->sum_ineq / shared_data->n_nodes << "\n";
-	    log_file << "AVG_CP_ITER: " << (double) shared_data->sum_cp_iter / shared_data->n_nodes << "\n";
-	    log_file << "ROOT_GAP: " << std::max(0.0, root_gap) << "\n";
-	    log_file << "GAP: " << std::max(0.0, shared_data->gap) << "\n";
-	    log_file << "ROOT_LB: " << shared_data->root_lb << "\n";
-	    log_file << "BEST_UB: " << shared_data->global_ub << "\n";
-	    log_file << "BEST_LB: " << shared_data->best_lb << "\n\n";
-    }
+	log_file << "\n";
+	log_file << "WALL_TIME: " << duration_all.count() << " sec\n";
+	log_file << "N_NODES: " << shared_data->n_nodes << "\n";
+	log_file << "AVG_INEQ: " << (double) shared_data->sum_ineq / shared_data->n_nodes << "\n";
+	log_file << "AVG_CP_ITER: " << (double) shared_data->sum_cp_iter / shared_data->n_nodes << "\n";
+	log_file << "ROOT_GAP: " << std::max(0.0, root_gap) << "\n";
+	log_file << "GAP: " << std::max(0.0, shared_data->gap) << "\n";
+	log_file << "ROOT_LB: " << shared_data->root_lb << "\n";
+	log_file << "BEST_UB: " << shared_data->global_ub << "\n";
+	log_file << "BEST_LB: " << shared_data->best_lb << "\n\n";
 
     sol = shared_data->global_X;
 

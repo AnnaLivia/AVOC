@@ -43,9 +43,9 @@ extern int k;
 extern int p;
 
 // partition and anticlustering
+extern int n_starts;
 extern double min_gap;
 extern double max_time;
-extern int n_threads_anti;
 extern int n_threads_part;
 
 // kmeans

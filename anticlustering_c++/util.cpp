@@ -1,7 +1,6 @@
 #include "util.h"
 #include <iomanip>
 
-
 // build the must link map history
 std::map<int, std::set<int>> build_must_link_map(std::map<int, std::set<int>> &old_ml_map, int i, int j) {
 

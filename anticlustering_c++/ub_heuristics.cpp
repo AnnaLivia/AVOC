@@ -1,7 +1,6 @@
 #include "ub_heuristics.h"
 #include "ilp_model.h"
 #include "Kmeans.h"
-#include "kmeans_util.h"
 #include "util.h"
 
 arma::mat centroids_recovery(arma::mat &Ws_shr, arma::mat &Zopt, int k){

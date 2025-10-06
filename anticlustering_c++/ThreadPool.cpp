@@ -2,9 +2,7 @@
 #include <thread>
 #include <condition_variable>
 #include <vector>
-#include "ThreadPool.h"
 #include "config_params.h"
-
 
 ThreadPool::ThreadPool(SharedData *shared_data, InputData *input_data, int n_thread) {
 
