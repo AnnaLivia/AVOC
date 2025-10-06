@@ -1,7 +1,7 @@
 # AVOC: A Novel Clustering Algorithm with Optimality Guarantees </br>
 
 <p align="center">
-  <img src="https://github.com/AnnaLivia/AVOC/blob/main/logo.png" width="160" height="200" />
+  <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/logo.png" width="160" height="200" />
 </p>
 
 This repository contains the **full source code and benchmark datasets** used in the paper:  
@@ -109,7 +109,8 @@ The log file reports AVOC’s progress when improvements are found, including:
 -  Stopping criterion met
 
 It also contains detailed SOS-SDP information for each anticluster (bounds, flags, cuts, runtime, etc.).
-👉 See the [`example`](./Results/4part/example/example_LOG.txt) for details.
+
+👉 See the [`example`](./Results/example/example_LOG.txt) for details.
 
 ---
 <br>
