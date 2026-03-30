@@ -20,4 +20,3 @@ if '__main__' == __name__:
     else:
         np.savetxt(args.assignment_file, km.labels_.astype(np.int32), fmt="%d")
 
-

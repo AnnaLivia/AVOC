@@ -331,7 +331,7 @@ void run(int argc, char **argv) {
     std::cout << std::fixed 	   		   << std::setprecision(2);
     std::cout << "Initial Heuristic MSS: " << init_mss << "\n";
     std::cout << "---------------------------------------------------------------------\n\n";
-    log_file.open(result_path + "_LOGinit.txt");
+    log_file.open(result_path + "_LOG.txt");
     write_log_preamble(init_mss);
 
     test_SUMMARY << std::fixed << std::setprecision(2)
