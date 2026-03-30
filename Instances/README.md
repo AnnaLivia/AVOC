@@ -1,4 +1,4 @@
-## AVOC: A Novel Clustering Algorithm with Optimality Guarantees </br>
+## AVOC: Anticlustering Validation Of Clustering </br>
 
 <p align="center">
   <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/logo.png" width="160" height="200" />
