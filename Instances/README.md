@@ -1,5 +1,3 @@
-## AVOC: Anticlustering Validation Of Clustering </br>
-
 <p align="center">
   <img src="https://github.com/AnnaLivia/AVOC/blob/main/Figures/logo.png" width="160" height="200" />
 </p>
@@ -38,16 +36,16 @@ Below we show datasets with $N=10,000$, $K=3$, and $\sigma \in \{0.50, 0.75, 1.0
 We also consider eight benchmark datasets from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/) and the [UCR Time Series Classification Archive](https://www.cs.ucr.edu/~eamonn/time_series_data_2018/).  
 The number of clusters was selected using the **elbow method**.
 
-| Dataset         | N      | D    | K | Cluster Sizes               |
-|----------- ---- |--------|------|---|-----------------------------|
-| Abalone         | 4,177  | 10   | 3 | 1,308, 1,341, 1,528 |
-| Facebook        | 7,050  | 13   | 3 | 218, 2,558, 4,274 |
-| Frogs           | 7,195  | 22   | 4 | 605, 670, 2,367, 3,553 |
-| Electric        | 10,000 | 12   | 3 | 2,886, 3,537, 3,577 |
-| Pulsar          | 17,898 | 8    | 2 | 2,057, 15,841 |
-| StarLightCurves | 9,236  | 1024 | 3 | 2,552 2,576 4,108| 
-| TwoPatterns     | 5,000  | 128  | 4 | 1,118 1,159 1,296 1,427| 
-| Wafer           | 7,164  | 152  | 2 | 2,401 4,763| 
+| Dataset           | N      | D    | K | Cluster Sizes                  |
+|-------------------|--------|------|---|--------------------------------|
+| Abalone           | 4,177  | 10   | 3 | 1,308, 1,341, 1,528           |
+| Facebook          | 7,050  | 13   | 3 | 218, 2,558, 4,274             |
+| Frogs             | 7,195  | 22   | 4 | 605, 670, 2,367, 3,553        |
+| Electric          | 10,000 | 12   | 3 | 2,886, 3,537, 3,577           |
+| Pulsar            | 17,898 | 8    | 2 | 2,057, 15,841                 |
+| StarLightCurves   | 9,236  | 1024 | 3 | 2,552, 2,576, 4,108           |
+| TwoPatterns       | 5,000  | 128  | 4 | 1,118, 1,159, 1,296, 1,427    |
+| Wafer             | 7,164  | 152  | 2 | 2,401, 4,763                 |
 
 
 > ℹ️ The **Abalone** dataset is the largest instance previously solved to optimality by **SOS-SDP**.
